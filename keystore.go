@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"errors"
 	"time"
 
 	"go.zenithar.org/keystore/key"
@@ -15,10 +16,18 @@ type Expirable interface {
 
 // KeyStore contract
 type KeyStore interface {
-	List() ([]key.Key, error)
+	All() ([]key.Key, error)
+	OnlyPublicKeys() ([]key.Key, error)
 	Add(key.Key) error
 	AddWithExpiration(key.Key, time.Duration) error
 	Get(string) (key.Key, error)
 	Remove(string) error
 	RotateKeys() error
 }
+
+// -----------------------------------------------------------------------------
+
+var (
+	// ErrKeyNotFound is raised when trying to get inexistant key from keystore
+	ErrKeyNotFound = errors.New("keystore: Key not found")
+)

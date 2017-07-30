@@ -5,13 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"golang.org/x/crypto/ed25519"
 )
 
 type ed25519Key struct {
-	priv ed25519.PrivateKey
-	pub  ed25519.PublicKey
+	timestamp time.Time
+	priv      ed25519.PrivateKey
+	pub       ed25519.PublicKey
 }
 
 // Ed25519 key holder
@@ -22,8 +24,9 @@ func Ed25519() (Key, error) {
 	}
 
 	return &ed25519Key{
-		priv: privateKey,
-		pub:  publicKey,
+		timestamp: time.Now().UTC(),
+		priv:      privateKey,
+		pub:       publicKey,
 	}, nil
 }
 

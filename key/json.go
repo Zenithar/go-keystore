@@ -2,6 +2,7 @@ package key
 
 // rawJWK implements the internal representation for serialzing/deserializing a JWK: RFC 7517 Section 4
 type rawJWK struct {
+	IssuedAt                 int64    `json:"iat,omitempty"`
 	PublicKeyUse             string   `json:"use,omitempty"`      // JWK 4.2
 	KeyType                  string   `json:"kty,omitempty"`      // JWK 4.1
 	KeyID                    string   `json:"kid,omitempty"`      // JWK 4.5
