@@ -10,12 +10,8 @@ import (
 )
 
 func TestInMemoryKeystore(t *testing.T) {
-	ks, _ := NewInMemory()
-
-	k1, _ := key.Ed25519()
-	ks.Add(k1)
-	k2, _ := key.Ed25519()
-	ks.Add(k2)
+	ks, _ := NewInMemory(key.Ed25519)
+	ks.Generate(4)
 
 	kl, _ := ks.OnlyPublicKeys()
 	s, _ := prettyjson.Marshal(kl)

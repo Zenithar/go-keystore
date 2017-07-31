@@ -81,6 +81,20 @@ func (k *ed25519Key) Public() Key {
 	}
 }
 
+func (k *ed25519Key) Sign(data []byte) ([]byte, error) {
+	if !k.HasPrivate() {
+		return nil, ErrInvalidOperationCouldSignWithoutPrivateKey
+	}
+	return ed25519.Sign(k.priv, data), nil
+}
+
+func (k *ed25519Key) Verify(data, sig []byte) (bool, error) {
+	if !k.HasPublic() {
+		return false, ErrInvalidOperationCouldSignWithoutPrivateKey
+	}
+	return ed25519.Verify(k.pub, data, sig), nil
+}
+
 // -----------------------------------------------------------------------------
 
 func (k *ed25519Key) MarshalJSON() ([]byte, error) {

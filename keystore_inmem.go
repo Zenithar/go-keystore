@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,18 +11,47 @@ import (
 type inMemoryKeyStore struct {
 	sync.RWMutex
 
-	store map[string]key.Key
+	generator KeyGenerator
+	store     map[string]key.Key
+	keys      []string
+	count     int
+	pick      int
 }
 
 // NewInMemory returns an in-memory map based keystore
-func NewInMemory() (KeyStore, error) {
+func NewInMemory(generator KeyGenerator) (KeyStore, error) {
 	store := make(map[string]key.Key)
 	return &inMemoryKeyStore{
-		store: store,
+		store:     store,
+		generator: generator,
+		pick:      0,
+		count:     0,
 	}, nil
 }
 
 // -----------------------------------------------------------------------------
+func (ks *inMemoryKeyStore) Generate(count int) ([]key.Key, error) {
+	if count < 1 {
+		return nil, ErrGeneratorNeedPositiveValueAboveOne
+	}
+
+	for i := 0; i < count; i++ {
+		k, err := ks.generator()
+		if err != nil {
+			return nil, fmt.Errorf("keystore: Key generation error %v", err)
+		}
+		ks.Add(k)
+	}
+
+	keys, _ := ks.All()
+	for _, k := range keys {
+		ks.keys = append(ks.keys, k.ID())
+		ks.count++
+	}
+
+	return keys, nil
+}
+
 func (ks *inMemoryKeyStore) All() ([]key.Key, error) {
 	ks.RLock()
 	defer ks.RUnlock()
@@ -42,6 +72,12 @@ func (ks *inMemoryKeyStore) OnlyPublicKeys() ([]key.Key, error) {
 		result = append(result, i.Public())
 	}
 	return result, nil
+}
+
+func (ks *inMemoryKeyStore) Pick() (key.Key, error) {
+	// Round robin
+	ks.pick = (ks.pick + 1) % (len(ks.keys))
+	return ks.store[ks.keys[ks.pick]], nil
 }
 
 func (ks *inMemoryKeyStore) Add(k key.Key) error {
