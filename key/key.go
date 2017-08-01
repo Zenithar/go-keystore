@@ -19,4 +19,5 @@ var (
 	ErrInvalidSignature                            = errors.New("key: invalid signature")
 	ErrInvalidOperationCouldSignWithoutPrivateKey  = errors.New("key: invalid operation : could not sign without a private key")
 	ErrInvalidOperationCouldVerifyWithoutPublicKey = errors.New("key: invalid operation : could not verify without a public key")
+	ErrAlgorithmNotSupported                       = errors.New("key: Algorithm not supported")
 )

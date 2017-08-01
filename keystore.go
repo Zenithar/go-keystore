@@ -24,7 +24,7 @@ type KeyStore interface {
 	Remove(string) error
 	RotateKeys() error
 	Pick() (key.Key, error)
-	Generate(int) ([]key.Key, error)
+	Generate() (key.Key, error)
 }
 
 // KeyGenerator is the key builder to use for the keystore
@@ -33,6 +33,8 @@ type KeyGenerator func() (key.Key, error)
 // -----------------------------------------------------------------------------
 
 var (
+	// ErrNotImplemented is raised when calling not implemented method
+	ErrNotImplemented = errors.New("keystore: Method not implemented")
 	// ErrKeyNotFound is raised when trying to get inexistant key from keystore
 	ErrKeyNotFound = errors.New("keystore: Key not found")
 	// ErrGeneratorNeedPositiveValueAboveOne is raised when caller gives a value under 1 as count

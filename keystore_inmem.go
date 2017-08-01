@@ -30,26 +30,13 @@ func NewInMemory(generator KeyGenerator) (KeyStore, error) {
 }
 
 // -----------------------------------------------------------------------------
-func (ks *inMemoryKeyStore) Generate(count int) ([]key.Key, error) {
-	if count < 1 {
-		return nil, ErrGeneratorNeedPositiveValueAboveOne
+func (ks *inMemoryKeyStore) Generate() (key.Key, error) {
+	k, err := ks.generator()
+	if err != nil {
+		return nil, fmt.Errorf("keystore: Key generation error %v", err)
 	}
 
-	for i := 0; i < count; i++ {
-		k, err := ks.generator()
-		if err != nil {
-			return nil, fmt.Errorf("keystore: Key generation error %v", err)
-		}
-		ks.Add(k)
-	}
-
-	keys, _ := ks.All()
-	for _, k := range keys {
-		ks.keys = append(ks.keys, k.ID())
-		ks.count++
-	}
-
-	return keys, nil
+	return k, nil
 }
 
 func (ks *inMemoryKeyStore) All() ([]key.Key, error) {
