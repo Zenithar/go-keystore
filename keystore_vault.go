@@ -1,12 +1,14 @@
 package keystore
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 	vault "github.com/hashicorp/vault/api"
 
 	"go.zenithar.org/keystore/key"
@@ -174,7 +176,7 @@ func (ks *vaultKeyStore) AddWithExpiration(k key.Key, exp time.Duration) error {
 	err = ks.writeSecret(fmt.Sprintf("jwk/%s", k.ID()), map[string]interface{}{
 		"value": string(jwk),
 		"iat":   time.Now().UTC().Unix(),
-		"exp":   time.Now().UTC().Add(exp),
+		"exp":   time.Now().UTC().Add(exp).Unix(),
 	})
 	if err != nil {
 		return fmt.Errorf("vault: Unable to add a key to the vault: %T:%v", err, err)
@@ -187,11 +189,98 @@ func (ks *vaultKeyStore) Remove(id string) error {
 	return ks.removeSecret(fmt.Sprintf("jwk/%s", id))
 }
 
-func (ks *vaultKeyStore) RotateKeys() error {
-	return ErrNotImplemented
+func (ks *vaultKeyStore) RotateKeys(ctx context.Context) error {
+	return ks.rotateJob()
 }
 
 // -----------------------------------------------------------------------------
+
+func (ks *vaultKeyStore) rotateJob() error {
+	now := time.Now().UTC()
+
+	// Retrieve last rotation date
+	secret, _ := ks.getSecret("next_rotation")
+	if secret != nil {
+		// Parse date
+		if dateRaw, ok := secret["value"]; ok {
+			if nextRotation, ok := dateRaw.(json.Number); ok {
+				v, _ := nextRotation.Int64()
+				if time.Unix(v, 0).After(now) {
+					// Rotation already done
+					logrus.Debug("[VAULT] Key rotation already done, skipping ...")
+					return nil
+				}
+			} else {
+				return fmt.Errorf("vault: Unable to rotate keys, unable to decode next rotation date")
+			}
+		}
+	}
+
+	// Update rotation date
+	err := ks.writeSecret("next_rotation", map[string]interface{}{
+		"value": now.Add(5 * time.Minute).UTC().Unix(),
+	})
+	if err != nil {
+		return fmt.Errorf("vault: Unable to rotate keys, unable to update rotation date: %T:%v", err, err)
+	}
+
+	// List all keys
+	keys, err := ks.All()
+	if err != nil {
+		return fmt.Errorf("vault: Unable to rotate keys, unable to retrieve all keys: %T:%v", err, err)
+	}
+
+	// Ignore if no key available
+	if len(keys) == 0 {
+		logrus.Debug("[VAULT] No key to rotate, skipping ...")
+		return nil
+	}
+
+	// For each key
+	for _, k := range keys {
+		secret, err := ks.getSecret(fmt.Sprintf("jwk/%s", k.ID()))
+		if err != nil {
+			logrus.WithError(err).WithField("kid", k.ID()).Warn("[VAULT] Unable to retrieve key from vault, skipping ...")
+			continue
+		}
+
+		// Check expiration
+		if expRaw, ok := secret["exp"]; ok {
+			// Exp is a float64
+			spew.Dump(expRaw)
+			if expiration, ok := expRaw.(json.Number); ok {
+				v, _ := expiration.Int64()
+
+				// Calculate dates
+				expirationDate := time.Unix(v, 0)
+				deletionDate := expirationDate.Add(2 * time.Hour)
+
+				// Check expiration time
+				if now.After(expirationDate) {
+					// Mark as unuseable
+					secret["usable"] = false
+					err = ks.writeSecret(fmt.Sprintf("jwk/%s", k.ID()), secret)
+					if err != nil {
+						logrus.WithError(err).WithField("kid", k.ID()).Warn("[VAULT] Unable to save key in vault, skipping ...")
+						continue
+					}
+				}
+				if now.After(deletionDate) {
+					// Delete key after grace period
+					err = ks.Remove(k.ID())
+					if err != nil {
+						logrus.WithError(err).WithField("kid", k.ID()).Warn("[VAULT] Unable to remove key from vault, skipping ...")
+						continue
+					}
+				}
+			} else {
+				logrus.Error("vault: Expiration key type error.")
+			}
+		}
+	}
+
+	return nil
+}
 
 func (ks *vaultKeyStore) getSecret(path string) (map[string]interface{}, error) {
 	secret, err := ks.client.Logical().Read(ks.getSecretPath(path))

@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -100,6 +101,6 @@ func (ks *inMemoryKeyStore) Remove(id string) error {
 	return nil
 }
 
-func (ks *inMemoryKeyStore) RotateKeys() error {
+func (ks *inMemoryKeyStore) RotateKeys(ctx context.Context) error {
 	return nil
 }

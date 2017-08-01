@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -22,7 +23,7 @@ type KeyStore interface {
 	AddWithExpiration(key.Key, time.Duration) error
 	Get(string) (key.Key, error)
 	Remove(string) error
-	RotateKeys() error
+	RotateKeys(context.Context) error
 	Pick() (key.Key, error)
 	Generate() (key.Key, error)
 }
