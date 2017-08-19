@@ -40,6 +40,10 @@ func toEd25519(raw *rawJWK) (Key, error) {
 		return nil, errors.New("key: invalid ed25519 public key size")
 	}
 
+	if keyIDFromData(x) != raw.KeyID {
+		return nil, errors.New("key: invalid key identifier, given one does not match expected")
+	}
+
 	k := &ed25519Key{
 		pub: x,
 	}
@@ -90,7 +94,7 @@ func (k *ed25519Key) Sign(data []byte) ([]byte, error) {
 
 func (k *ed25519Key) Verify(data, sig []byte) (bool, error) {
 	if !k.HasPublic() {
-		return false, ErrInvalidOperationCouldSignWithoutPrivateKey
+		return false, ErrInvalidOperationCouldVerifyWithoutPublicKey
 	}
 	return ed25519.Verify(k.pub, data, sig), nil
 }
