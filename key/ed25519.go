@@ -1,6 +1,7 @@
 package key
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -17,7 +18,7 @@ type ed25519Key struct {
 }
 
 // Ed25519 key holder
-func Ed25519() (Key, error) {
+func Ed25519(context.Context) (Key, error) {
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, err

@@ -1,15 +1,10 @@
 package keystore
 
-import (
-	"go.zenithar.org/keystore/backends"
-	"go.zenithar.org/keystore/key"
-)
-
 // Options contains all values that are needed for keystore.
 type Options struct {
-	Generator key.Generator
-	Backend   backends.Backend
-	Interval  uint64
+	OneTime  bool
+	Watch    bool
+	Interval uint64
 }
 
 // Option configures the keystore.
@@ -22,16 +17,16 @@ func WithInterval(interval uint64) Option {
 	}
 }
 
-// WithGenerator sets the keystore key generator
-func WithGenerator(generator key.Generator) Option {
+// OneTime sets the backend polling interval.
+func OneTime() Option {
 	return func(o *Options) {
-		o.Generator = generator
+		o.OneTime = true
 	}
 }
 
-// WithBackend sets the backend implementation
-func WithBackend(backend backends.Backend) Option {
+// EnableWatch enables watch feature on backend side.
+func EnableWatch() Option {
 	return func(o *Options) {
-		o.Backend = backend
+		o.Watch = true
 	}
 }

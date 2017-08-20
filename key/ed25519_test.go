@@ -1,6 +1,7 @@
 package key
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -8,10 +9,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	ctx = context.Background()
+)
+
 func TestEd25519_Generation(t *testing.T) {
 	RegisterTestingT(t)
 
-	key, _ := Ed25519()
+	key, _ := Ed25519(ctx)
 	Expect(key.Algorithm()).To(Equal("Ed25519"))
 	Expect(key.HasPrivate()).To(BeTrue())
 	Expect(key.HasPublic()).To(BeTrue())

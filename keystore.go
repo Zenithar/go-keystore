@@ -14,20 +14,19 @@ import (
 type defaultKeyStore struct {
 	sync.RWMutex
 
-	generator key.Generator
-	store     backends.Backend
-	interval  uint64
+	store    backends.Backend
+	interval uint64
 
 	keys map[string]key.Key
 }
 
 // New returns a default keystore implementation instance
-func New(opts ...Option) (KeyStore, error) {
+func New(backend backends.Backend, opts ...Option) (KeyStore, error) {
 	// Default Options
 	options := &Options{
-		Generator: key.Ed25519,
-		Backend:   nil,
-		Interval:  60,
+		Interval: 60,
+		Watch:    false,
+		OneTime:  false,
 	}
 
 	// Overrides with option
@@ -37,10 +36,9 @@ func New(opts ...Option) (KeyStore, error) {
 
 	// Initializes default value
 	ks := &defaultKeyStore{
-		generator: options.Generator,
-		store:     options.Backend,
-		interval:  options.Interval,
-		keys:      make(map[string]key.Key),
+		store:    backend,
+		interval: options.Interval,
+		keys:     make(map[string]key.Key),
 	}
 
 	// Synchronize with backend
@@ -48,8 +46,8 @@ func New(opts ...Option) (KeyStore, error) {
 }
 
 // -----------------------------------------------------------------------------
-func (ks *defaultKeyStore) Generate(context.Context) (key.Key, error) {
-	k, err := ks.generator()
+func (ks *defaultKeyStore) Generate(ctx context.Context, generator key.Generator) (key.Key, error) {
+	k, err := generator(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("keystore: Key generation error %v", err)
 	}
@@ -83,8 +81,20 @@ func (ks *defaultKeyStore) OnlyPublicKeys(ctx context.Context) ([]key.Key, error
 
 func (ks *defaultKeyStore) Add(ctx context.Context, keys ...key.Key) error {
 	for _, k := range keys {
+		// Encode key
+		jwk, err := json.Marshal(k.Public())
+		if err != nil {
+			continue
+		}
+
+		// Wrap the key in a holder
+		holder := &keyHolder{
+			IssuedAt: time.Now().UTC().Unix(),
+			Data:     jwk,
+		}
+
 		// Marshal only public key to json
-		payload, err := json.Marshal(k.Public())
+		payload, err := json.Marshal(holder)
 		if err != nil {
 			return fmt.Errorf("keystore: Unable to marshal key as JSON: %v", err)
 		}
@@ -148,7 +158,18 @@ func (ks *defaultKeyStore) synchronize(ctx context.Context) error {
 		}
 
 		// Decode value as Key
-		k, err := key.FromString(value)
+		holder := &keyHolder{}
+		err = json.Unmarshal(value, holder)
+		if err != nil {
+			return err
+		}
+
+		// If key is expired ignore it
+		if holder.IsExpired() {
+			continue
+		}
+
+		k, err := key.FromString(holder.Data)
 		if err != nil {
 			continue
 		}

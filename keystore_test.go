@@ -14,12 +14,12 @@ func TestInMemoryKeyStore(t *testing.T) {
 	defer cancel()
 
 	backend, _ := inmemory.New()
-	ks, _ := New(WithGenerator(key.Ed25519), WithBackend(backend), WithInterval(10))
+	ks, _ := New(backend, WithInterval(10))
 	go ks.Monitor(ctx)
 
 	// Generates keys
-	k1, _ := ks.Generate(ctx)
-	k2, _ := ks.Generate(ctx)
+	k1, _ := ks.Generate(ctx, key.Ed25519)
+	k2, _ := ks.Generate(ctx, key.Ed25519)
 
 	// Add to keystore
 	err := ks.Add(ctx, k1, k2.Public())
