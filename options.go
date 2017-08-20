@@ -5,6 +5,7 @@ type Options struct {
 	OneTime  bool
 	Watch    bool
 	Interval uint64
+	Snappy   bool
 }
 
 // Option configures the keystore.
@@ -28,5 +29,12 @@ func OneTime() Option {
 func EnableWatch() Option {
 	return func(o *Options) {
 		o.Watch = true
+	}
+}
+
+// DisableSnappy compression for JWK data
+func DisableSnappy() Option {
+	return func(o *Options) {
+		o.Snappy = false
 	}
 }

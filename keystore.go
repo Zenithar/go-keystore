@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/snappy"
+
 	"go.zenithar.org/keystore/backends"
 	"go.zenithar.org/keystore/key"
 )
@@ -14,8 +16,8 @@ import (
 type defaultKeyStore struct {
 	sync.RWMutex
 
-	store    backends.Backend
-	interval uint64
+	store backends.Backend
+	dopts *Options
 
 	keys map[string]key.Key
 }
@@ -27,6 +29,7 @@ func New(backend backends.Backend, opts ...Option) (KeyStore, error) {
 		Interval: 60,
 		Watch:    false,
 		OneTime:  false,
+		Snappy:   true,
 	}
 
 	// Overrides with option
@@ -36,9 +39,9 @@ func New(backend backends.Backend, opts ...Option) (KeyStore, error) {
 
 	// Initializes default value
 	ks := &defaultKeyStore{
-		store:    backend,
-		interval: options.Interval,
-		keys:     make(map[string]key.Key),
+		store: backend,
+		dopts: options,
+		keys:  make(map[string]key.Key),
 	}
 
 	// Synchronize with backend
@@ -85,6 +88,11 @@ func (ks *defaultKeyStore) Add(ctx context.Context, keys ...key.Key) error {
 		jwk, err := json.Marshal(k.Public())
 		if err != nil {
 			continue
+		}
+
+		if ks.dopts.Snappy {
+			// Compress JWK
+			jwk = snappy.Encode(nil, jwk)
 		}
 
 		// Wrap the key in a holder
@@ -135,7 +143,7 @@ func (ks *defaultKeyStore) Monitor(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(time.Duration(ks.interval) * time.Second):
+		case <-time.After(time.Duration(ks.dopts.Interval) * time.Second):
 			ks.synchronize(ctx)
 		default:
 		}
@@ -169,7 +177,17 @@ func (ks *defaultKeyStore) synchronize(ctx context.Context) error {
 			continue
 		}
 
-		k, err := key.FromString(holder.Data)
+		payload := holder.Data
+		if ks.dopts.Snappy {
+			// Decompress buffer
+			payload, err = snappy.Decode(nil, holder.Data)
+			if err != nil {
+				continue
+			}
+		}
+
+		// Deserialize JWK
+		k, err := key.FromString(payload)
 		if err != nil {
 			continue
 		}
