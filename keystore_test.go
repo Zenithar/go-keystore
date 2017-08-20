@@ -10,12 +10,11 @@ import (
 )
 
 func TestInMemoryKeyStore(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
 	backend, _ := inmemory.New()
-	ks, _ := New(backend, WithInterval(10))
-	go ks.Monitor(ctx)
+	ks, _ := New(backend, WithInterval(1))
 
 	// Generates keys
 	k1, _ := ks.Generate(ctx, key.Ed25519)
@@ -58,5 +57,5 @@ func TestInMemoryKeyStore(t *testing.T) {
 	// Remove a key
 	ks.Remove(ctx, k2.ID())
 
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(15 * time.Second)
 }

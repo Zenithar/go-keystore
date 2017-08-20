@@ -22,7 +22,6 @@ type KeyStore interface {
 	Get(context.Context, string) (key.Key, error)
 	Remove(context.Context, string) error
 	Generate(context.Context, key.Generator) (key.Key, error)
-	Monitor(context.Context)
 }
 
 // -----------------------------------------------------------------------------

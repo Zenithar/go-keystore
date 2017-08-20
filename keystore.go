@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ type defaultKeyStore struct {
 
 	store backends.Backend
 	dopts *Options
+	done  context.CancelFunc
 
 	keys map[string]key.Key
 }
@@ -37,15 +39,23 @@ func New(backend backends.Backend, opts ...Option) (KeyStore, error) {
 		opt(options)
 	}
 
+	// Initialize a default context
+	ctx, cancel := context.WithCancel(context.TODO())
+
 	// Initializes default value
 	ks := &defaultKeyStore{
 		store: backend,
 		dopts: options,
 		keys:  make(map[string]key.Key),
+		done:  cancel,
 	}
 
+	// Start keystore Monitor
+	runtime.SetFinalizer(ks, func(dks *defaultKeyStore) { dks.Close() })
+	go ks.monitor(ctx)
+
 	// Synchronize with backend
-	return ks, ks.synchronize(context.Background())
+	return ks, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -130,6 +140,9 @@ func (ks *defaultKeyStore) Get(ctx context.Context, id string) (key.Key, error) 
 }
 
 func (ks *defaultKeyStore) Remove(ctx context.Context, id string) error {
+	ks.Lock()
+	defer ks.Unlock()
+
 	if _, ok := ks.keys[id]; ok {
 		delete(ks.keys, id)
 		return nil
@@ -138,7 +151,13 @@ func (ks *defaultKeyStore) Remove(ctx context.Context, id string) error {
 	return ErrKeyNotFound
 }
 
-func (ks *defaultKeyStore) Monitor(ctx context.Context) {
+func (ks *defaultKeyStore) Close() {
+	ks.done()
+}
+
+// -----------------------------------------------------------------------------
+
+func (ks *defaultKeyStore) monitor(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -150,14 +169,18 @@ func (ks *defaultKeyStore) Monitor(ctx context.Context) {
 	}
 }
 
-// -----------------------------------------------------------------------------
-
 func (ks *defaultKeyStore) synchronize(ctx context.Context) error {
 	keys, err := ks.store.List(ctx, "jwk")
 	if err != nil {
 		return fmt.Errorf("keystore: Unable to synchronize keystore with backend")
 	}
 
+	// Delete keys
+	for kid := range ks.keys {
+		ks.Remove(ctx, kid)
+	}
+
+	// Update keys
 	for _, kid := range keys {
 		// Retrieve each value
 		value, err := ks.store.Get(ctx, fmt.Sprintf("jwk/%s", kid))
