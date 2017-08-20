@@ -6,7 +6,7 @@ type rawJWK struct {
 	PublicKeyUse             string   `json:"use,omitempty"`      // JWK 4.2
 	KeyType                  string   `json:"kty,omitempty"`      // JWK 4.1
 	KeyID                    string   `json:"kid,omitempty"`      // JWK 4.5
-	KeyOperations            string   `json:"key_ops,omitempty"`  // JWK 4.3
+	KeyOperations            []string `json:"key_ops,omitempty"`  // JWK 4.3
 	Curve                    string   `json:"crv,omitempty"`      // RSA Curve JWA 6.2.1.1
 	Algorithm                string   `json:"alg,omitempty"`      // JWK 4.4
 	K                        string   `json:"k,omitempty"`        // Symmetric Key JWA 6.4.1

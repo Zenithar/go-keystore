@@ -26,12 +26,14 @@ func TestEd25519_Deserialization(t *testing.T) {
 	RegisterTestingT(t)
 
 	key, err := toEd25519(&rawJWK{
-		Algorithm: "EC",
-		Curve:     "Ed25519",
-		KeyID:     "WPBK:AOP4:PHSV:CXYB:HIVA:PJ2S:E43Z:4PF3:HFFI:AVMG:OGBN:6XK7",
-		KeyType:   "OKP",
-		X:         "KuCra6cYFp3C4FcR4Yr6lC2gojKpS3d7wkazdKD_Dm4",
-		D:         "cYZz_frjJCOiB2Ou-IsxYUu9MbrZhX0YLghvFC05brQq4KtrpxgWncLgVxHhivqULaCiMqlLd3vCRrN0oP8Obg",
+		Algorithm:     "EC",
+		Curve:         "Ed25519",
+		KeyID:         "FYdFGFkduT7yJXkAMqF6BelQhS5tKaHWEBik0AhlxZ0",
+		KeyType:       "OKP",
+		X:             "uMQbnHrL3rVpBddEa9tgbRTS8OsjmgMOro8Ba2L0-ok",
+		D:             "PFPV4ItiU2VbMTxdddWrGYlGtG6FzO26aVzFgbvwNRK4xBucesvetWkF10Rr22BtFNLw6yOaAw6ujwFrYvT6iQ",
+		PublicKeyUse:  "sig",
+		KeyOperations: []string{"sign", "verify"},
 	})
 
 	Expect(key).ToNot(BeNil())
@@ -41,7 +43,7 @@ func TestEd25519_Deserialization(t *testing.T) {
 	fmt.Println(string(s))
 
 	Expect(key.Algorithm()).To(Equal("Ed25519"))
-	Expect(key.ID()).To(Equal("WPBK:AOP4:PHSV:CXYB:HIVA:PJ2S:E43Z:4PF3:HFFI:AVMG:OGBN:6XK7"))
+	Expect(key.ID()).To(Equal("FYdFGFkduT7yJXkAMqF6BelQhS5tKaHWEBik0AhlxZ0"))
 	Expect(key.HasPrivate()).To(BeTrue())
 	Expect(key.HasPublic()).To(BeTrue())
 }

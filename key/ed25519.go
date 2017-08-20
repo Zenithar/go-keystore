@@ -103,14 +103,17 @@ func (k *ed25519Key) Verify(data, sig []byte) (bool, error) {
 
 func (k *ed25519Key) MarshalJSON() ([]byte, error) {
 	r := &rawJWK{
-		KeyID:     k.ID(),
-		KeyType:   "OKP",
-		Algorithm: "EC",
-		Curve:     k.Algorithm(),
-		X:         base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(k.pub),
+		KeyID:         k.ID(),
+		KeyType:       "OKP",
+		Algorithm:     "EC",
+		Curve:         k.Algorithm(),
+		X:             base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(k.pub),
+		PublicKeyUse:  "sig",
+		KeyOperations: []string{"verify"},
 	}
 	if k.HasPrivate() {
 		r.D = base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(k.priv)
+		r.KeyOperations = append(r.KeyOperations, "sign")
 	}
 
 	return json.Marshal(r)
